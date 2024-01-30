@@ -11,16 +11,16 @@ BLUE = (11, 150, 191)
 fps = 60
 bg_x, fl_x = 0, 0
 
-gravity = 0.5
+gravity = 0.65
 
 BACKGROUND_IMAGE = pygame.image.load(os.path.join("assets", "background.png"))
-BACKGROUND = pygame.transform.scale_by(BACKGROUND_IMAGE, 0.3)
+BACKGROUND = pygame.transform.scale_by(BACKGROUND_IMAGE, 1)
 FLOOR_IMAGE = pygame.image.load(os.path.join("assets", "floor.png"))
-FLOOR = pygame.transform.scale_by(FLOOR_IMAGE, 0.5)
+FLOOR = pygame.transform.scale_by(FLOOR_IMAGE, (2, 0.5))
 PLAYER_IMAGE = pygame.image.load(os.path.join("assets", "player.png"))
-PLAYER = pygame.transform.scale(PLAYER_IMAGE, (80, 60))   # Scale the image to 70x70 pixels
+PLAYER = pygame.transform.scale_by(PLAYER_IMAGE, 2)   # Scale the image to 70x70 pixels
 OBSTACLE_IMAGE = pygame.image.load(os.path.join("assets", "obstacle.png"))
-OBSTACLE = OBSTACLE_IMAGE
+OBSTACLE = pygame.transform.scale_by(OBSTACLE_IMAGE, 4)
 
 BACKGROUND_WIDTH = BACKGROUND.get_width()
 FLOOR_WIDTH = FLOOR.get_width()
@@ -35,7 +35,7 @@ class Obstacle(pygame.sprite.Sprite):
         self.speed = [-4, 0]
         area = pygame.display.get_surface().get_rect()
         self.width, self.height = area.width, area.height
-        self.rect.center = (900, random.randint(0, self.height))
+        self.rect.center = (2000, random.randint(0, self.height))
 
     def update(self):
         rdm = random.randint(0, 1)
@@ -55,7 +55,7 @@ class Player(pygame.sprite.Sprite):
         self.rect.center = (self.width / 2, self.height / 2)
 
     def update(self):
-        angle = -self.speed[1] * 5
+        angle = -self.speed[1] * 4
         if angle > 90:
             angle = 90
         elif angle < -90:
@@ -76,8 +76,8 @@ def clip(val, minval, maxval):
 class Main(object):
     def __init__(self):
         pygame.init()
-        size = (self.width, self.height) = (800, 600)
-        self.screen = pygame.display.set_mode(size, pygame.FULLSCREEN)
+        self.width, self.height = pygame.display.Info().current_w, pygame.display.Info().current_h
+        self.screen = pygame.display.set_mode((0,0), pygame.FULLSCREEN)
         self.player = Player()
         self.obstacle = Obstacle()
         self.obstacles = []
