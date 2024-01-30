@@ -33,11 +33,9 @@ PLAYER_IMAGE2 = pygame.transform.scale_by(PLAYER_IMAGE2, 4)
 PLAYER_IMAGES = [PLAYER_IMAGE, PLAYER_IMAGE2]  # Save images in an array to animate with
 del PLAYER_IMAGE, PLAYER_IMAGE2  # Delete all unneeded images
 
-
 OBSTACLE_IMAGE = pygame.image.load(os.path.join("assets", "obstacle.png"))
 OBSTACLE = pygame.transform.scale_by(OBSTACLE_IMAGE, (4, 6))
 del OBSTACLE_IMAGE
-
 
 BACKGROUND_WIDTH = BACKGROUND.get_width()
 FLOOR_WIDTH = FLOOR.get_width()
@@ -48,6 +46,12 @@ hit = pygame.mixer.Sound("assets/sounds/hit.wav")
 point = pygame.mixer.Sound("assets/sounds/pointSound.wav")
 start = pygame.mixer.Sound("assets/sounds/start.wav")
 
+flap.set_volume(0.5)
+hit.set_volume(0.5)
+point.set_volume(0.4)
+start.set_volume(0.5)
+
+
 class Obstacle(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
@@ -55,15 +59,14 @@ class Obstacle(pygame.sprite.Sprite):
         self.image2 = pygame.transform.rotate(OBSTACLE, 180)
         self.rect = self.image1.get_rect()
         self.rect2 = self.image2.get_rect()
-        self.speed = [-4, 0]
+        self. speed = [-4, 0]
         area = pygame.display.get_surface().get_rect()
-        self.width, self.height = area.width, area.height
+        width, height = area.width, area.height
         self.rect.x = 2000
         self.rect2.x = 2000
-        self.rect.y = random.randint(200, self.height - 200)
+        self.rect.y = random.randint(200, height - 200)
         self.rect2.bottom = self.rect.top - 200
         self.canScore = True
-
 
     def update(self):
         self.rect = self.image1.get_rect(center=self.rect.center)
@@ -128,9 +131,10 @@ class Main(object):
         self.obstacle = Obstacle()
         self.obstacles = []
         self.screen.blit(self.player.image, (self.width / 2, self.height / 2))
-        self.setup_background()
+        self.background()
+        self.clock = pygame.time.Clock()
 
-    def setup_background(self):
+    def background(self):
         global bg_x
         bg_speed = 0.5
         bg_x -= bg_speed
@@ -149,36 +153,42 @@ class Main(object):
         self.screen.blit(FLOOR, (fl_x + FLOOR_WIDTH, self.height - FLOOR_HEIGHT))
 
     def draw_window(self):
-        self.setup_background()
+        self.background()
         self.floor()
+
         self.screen.blit(self.player.image, self.player.rect)
+
         for obstacle in self.obstacles:
             self.screen.blit(obstacle.image1, obstacle.rect)
             self.screen.blit(obstacle.image2, obstacle.rect2)
+
         score_text = get_font(30).render("Score: {}".format(self.score), True, WHITE)
         fps_text = get_font(30).render("FPS: {}".format(int(self.clock.get_fps())), True, WHITE)
+
         self.screen.blit(fps_text, (10, 40))
         self.screen.blit(score_text, (10, 10))
+
         pygame.display.update()
 
     def generate_obstacles(self):
         self.obstacles.append(Obstacle())
 
     def pre_game(self):
-        global game_state
+        global game_state, bg_x
         while game_state == "pre_game":
             self.screen.blit(BACKGROUND, (0, 0))
 
+            # Reset player and background
             self.player = Player()
+            bg_x = 0
 
             for obstacle in self.obstacles:
                 self.obstacles.remove(obstacle)
 
-            JUMP_TO_START_TEXT = get_font(150).render("JUMP TO START", True, "#ffffff")
+            jump_to_start_text = get_font(150).render("JUMP TO START", True, "#ffffff")
+            jump_to_start_rect = jump_to_start_text.get_rect(center=(self.width / 2, self.height / 2 - 200))
 
-            JUMP_TO_START_RECT = JUMP_TO_START_TEXT.get_rect(center=(self.width / 2, self.height / 2 - 200))
-
-            self.screen.blit(JUMP_TO_START_TEXT, JUMP_TO_START_RECT)
+            self.screen.blit(jump_to_start_text, jump_to_start_rect)
             self.screen.blit(self.player.image, self.player.rect)
 
             for event in pygame.event.get():
@@ -192,37 +202,38 @@ class Main(object):
 
             self.player.update()
             pygame.display.update()
+
         del self
 
     def game_over(self):
         global game_state
         while game_state == "game_over":
 
-            MENU_MOUSE_POS = pygame.mouse.get_pos()
+            menu_mouse_pos = pygame.mouse.get_pos()
 
-            GAME_OVER_TEXT = get_font(100).render("GAME OVER", True, "#d9243c")
-            GAME_OVER_RECT = GAME_OVER_TEXT.get_rect(center=(self.width / 2, self.height / 2 - 200))
+            game_over_text = get_font(100).render("GAME OVER", True, "#d9243c")
+            game_over_rect = game_over_text.get_rect(center=(self.width / 2, self.height / 2 - 200))
 
-            RESTART_BUTTON = Button(image=None, pos=(self.width / 2, self.height / 2),
+            restart_button = Button(image=None, pos=(self.width / 2, self.height / 2),
                                     text_input="RESTART", font=get_font(75), base_color="#d7fcd4",
                                     hovering_color="White")
-            QUIT_BUTTON = Button(image=None, pos=(self.width / 2, self.height / 2 + 100),
+            quit_button = Button(image=None, pos=(self.width / 2, self.height / 2 + 100),
                                  text_input="QUIT", font=get_font(75), base_color="#d7fcd4", hovering_color="White")
 
-            self.screen.blit(GAME_OVER_TEXT, GAME_OVER_RECT)
+            self.screen.blit(game_over_text, game_over_rect)
 
-            for button in [RESTART_BUTTON, QUIT_BUTTON]:
-                button.changeColor(MENU_MOUSE_POS)
+            for button in [restart_button, quit_button]:
+                button.changeColor(menu_mouse_pos)
                 button.update(self.screen)
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     quit_game()
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    if RESTART_BUTTON.checkForInput(MENU_MOUSE_POS):
+                    if restart_button.checkForInput(menu_mouse_pos):
                         game_state = "pre_game"
                         self.pre_game()
-                    if QUIT_BUTTON.checkForInput(MENU_MOUSE_POS):
+                    if quit_button.checkForInput(menu_mouse_pos):
                         quit_game()
 
             self.player.update()
@@ -233,12 +244,12 @@ class Main(object):
         global game_state
         player = self.player
         friction = 1
-        self.clock = pygame.time.Clock()
         counter = 0
         self.score = 0
         while game_state == "play":
             self.clock.tick(fps)
             counter += 1
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     game_state = "quit"
@@ -254,6 +265,7 @@ class Main(object):
                     game_state = "game_over"
                     hit.play()
                     self.game_over()
+
             if player.rect.bottom >= self.height - FLOOR_HEIGHT:
                 game_state = "game_over"
                 hit.play()
@@ -271,9 +283,11 @@ class Main(object):
             if counter == 120:
                 self.generate_obstacles()
                 counter = 0
-            player.update()
+
             for obstacle in self.obstacles:
                 obstacle.update()
+
+            player.update()
             self.draw_window()
 
     def main_menu(self):
@@ -281,34 +295,37 @@ class Main(object):
         while game_state == "menu":
             self.screen.blit(BACKGROUND, (0, 0))
 
-            MENU_MOUSE_POS = pygame.mouse.get_pos()
+            menu_mouse_pos = pygame.mouse.get_pos()
 
-            MENU_TEXT = get_font(100).render("MAIN MENU", True, "#b68f40")
+            menu_text = get_font(100).render("MAIN MENU", True, "#b68f40")
+            menu_rect = menu_text.get_rect(center=(self.width / 2, self.height / 2 - 200))
 
-            MENU_RECT = MENU_TEXT.get_rect(center=(self.width / 2, self.height / 2 - 200))
-
-            PLAY_BUTTON = Button(image=None, pos=(self.width / 2, self.height / 2),
+            play_button = Button(image=None, pos=(self.width / 2, self.height / 2),
                                  text_input="PLAY", font=get_font(75), base_color="#d7fcd4", hovering_color="White")
-            QUIT_BUTTON = Button(image=None, pos=(self.width / 2, self.height / 2 + 100),
+            quit_button = Button(image=None, pos=(self.width / 2, self.height / 2 + 100),
                                  text_input="QUIT", font=get_font(75), base_color="#d7fcd4", hovering_color="White")
 
-            self.screen.blit(MENU_TEXT, MENU_RECT)
+            self.screen.blit(menu_text, menu_rect)
 
-            for button in [PLAY_BUTTON, QUIT_BUTTON]:
-                button.changeColor(MENU_MOUSE_POS)
+            for button in [play_button, quit_button]:
+                button.changeColor(menu_mouse_pos)
                 button.update(self.screen)
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     quit_game()
+
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    if PLAY_BUTTON.checkForInput(MENU_MOUSE_POS):
+                    if play_button.checkForInput(menu_mouse_pos):
                         game_state = "pre_game"
                         self.pre_game()
-                    if QUIT_BUTTON.checkForInput(MENU_MOUSE_POS):
+
+                    if quit_button.checkForInput(menu_mouse_pos):
                         quit_game()
+
             pygame.display.update()
         del self
+
 
 if __name__ == "__main__":
     app = Main()
