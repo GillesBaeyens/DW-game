@@ -1,6 +1,9 @@
 import pygame
 import os
 import random
+import pyaudio
+import numpy as np
+import json
 from button import Button
 
 pygame.mixer.pre_init(44100, 16, 2, 4096)
@@ -10,11 +13,35 @@ pygame.display.set_caption("Flippy bird")
 
 WHITE = (255, 255, 255)
 
+#  AUDIO BULLSHIT
+CHUNK = 1024  # Number of frames per buffer
+FORMAT = pyaudio.paInt16  # Audio format (16-bit PCM)
+CHANNELS = 1  # Number of audio channels (1 for mono, 2 for stereo)
+RATE = 44100  # Sample rate (samples per second)
+rms_threshold = 60
+
+p = pyaudio.PyAudio()
+
+stream = p.open(format=FORMAT,
+                channels=CHANNELS,
+                rate=RATE,
+                input=True,
+                frames_per_buffer=CHUNK)
+
+#  LOAD HIGHSCORE
+try:
+    highscore = json.load(open("highscore.json"))["highscore"]
+except FileNotFoundError:
+    print("No highscore file found, creating one...")
+    highscore = 0
+
 fps = 60
 bg_x, fl_x = 0, 0
 game_state = "menu"
+voice_control = False
 
 gravity = 0.65
+new_highscore = False
 
 BACKGROUND_IMAGE = pygame.image.load(os.path.join("assets", "background.png"))
 BACKGROUND = pygame.transform.scale_by(BACKGROUND_IMAGE, 4.5)
@@ -27,7 +54,7 @@ choose_player = random.randint(0, 3)
 PLAYER_IMAGE = pygame.image.load(os.path.join("assets", f"player1.{choose_player}.png"))
 PLAYER_IMAGE2 = pygame.image.load(os.path.join("assets", f"player2.{choose_player}.png"))
 
-PLAYER_IMAGE = pygame.transform.scale_by(PLAYER_IMAGE, 4)   # Scale the image to 70x70 pixels
+PLAYER_IMAGE = pygame.transform.scale_by(PLAYER_IMAGE, 4)  # Scale the image to 70x70 pixels
 PLAYER_IMAGE2 = pygame.transform.scale_by(PLAYER_IMAGE2, 4)
 
 PLAYER_IMAGES = [PLAYER_IMAGE, PLAYER_IMAGE2]  # Save images in an array to animate with
@@ -59,13 +86,17 @@ class Obstacle(pygame.sprite.Sprite):
         self.image2 = pygame.transform.rotate(OBSTACLE, 180)
         self.rect = self.image1.get_rect()
         self.rect2 = self.image2.get_rect()
-        self. speed = [-4, 0]
+        self.speed = [-4, 0]
         area = pygame.display.get_surface().get_rect()
         width, height = area.width, area.height
         self.rect.x = 2000
         self.rect2.x = 2000
-        self.rect.y = random.randint(200, height - 200)
-        self.rect2.bottom = self.rect.top - 200
+        if voice_control:
+            self.rect.y = random.randint(300, height - 300)
+            self.rect2.bottom = self.rect.top - 250
+        else:
+            self.rect.y = random.randint(200, height - 200)
+            self.rect2.bottom = self.rect.top - 200
         self.canScore = True
 
     def update(self):
@@ -118,6 +149,8 @@ def get_font(size):  # Returns Press-Start-2P in the desired size
 
 
 def quit_game():
+    json.dump({"highscore": highscore}, open("highscore.json", "w"))
+
     pygame.quit()
     quit()
 
@@ -174,7 +207,7 @@ class Main(object):
         self.obstacles.append(Obstacle())
 
     def pre_game(self):
-        global game_state, bg_x
+        global game_state, bg_x, voice_control, rms_threshold
         while game_state == "pre_game":
             self.screen.blit(BACKGROUND, (0, 0))
 
@@ -185,7 +218,10 @@ class Main(object):
             for obstacle in self.obstacles:
                 self.obstacles.remove(obstacle)
 
-            jump_to_start_text = get_font(150).render("JUMP TO START", True, "#ffffff")
+            if voice_control:
+                jump_to_start_text = get_font(100).render("TALK TO START", True, "#d9243c")
+            else:
+                jump_to_start_text = get_font(100).render("JUMP TO START", True, "#d9243c")
             jump_to_start_rect = jump_to_start_text.get_rect(center=(self.width / 2, self.height / 2 - 200))
 
             self.screen.blit(jump_to_start_text, jump_to_start_rect)
@@ -194,11 +230,25 @@ class Main(object):
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     quit_game()
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_UP or event.key == pygame.K_SPACE:
-                        game_state = "play"
-                        self.player.speed[1] = -self.player.maxSpeed
-                        self.play()
+
+                if not voice_control:
+                    if event.type == pygame.KEYDOWN:
+                        if event.key == pygame.K_UP or event.key == pygame.K_SPACE:
+                            game_state = "play"
+                            self.player.speed[1] = -self.player.maxSpeed
+                            self.play()
+
+            if voice_control:
+                data = stream.read(CHUNK)
+                audio_signal = np.frombuffer(data, dtype=np.int16)
+
+                # Calculate RMS (Root Mean Square) as an estimate of loudness
+                rms = np.sqrt(abs(np.mean(np.square(audio_signal))))
+
+                if rms > rms_threshold:
+                    start.play()
+                    game_state = "play"
+                    self.play()
 
             self.player.update()
             pygame.display.update()
@@ -206,8 +256,11 @@ class Main(object):
         del self
 
     def game_over(self):
-        global game_state
+        global game_state, highscore, new_highscore
         while game_state == "game_over":
+            if self.score > highscore:
+                new_highscore = True
+                highscore = self.score
 
             menu_mouse_pos = pygame.mouse.get_pos()
 
@@ -217,31 +270,40 @@ class Main(object):
             restart_button = Button(image=None, pos=(self.width / 2, self.height / 2),
                                     text_input="RESTART", font=get_font(75), base_color="#d7fcd4",
                                     hovering_color="White")
-            quit_button = Button(image=None, pos=(self.width / 2, self.height / 2 + 100),
-                                 text_input="QUIT", font=get_font(75), base_color="#d7fcd4", hovering_color="White")
+            menu_button = Button(image=None, pos=(self.width / 2, self.height / 2 + 100),
+                                 text_input="MAIN MENU", font=get_font(75), base_color="#d7fcd4", hovering_color="White")
+
+            if new_highscore:
+                highscore_text = get_font(50).render("NEW HIGHSCORE: {}".format(highscore), True, "#d9243c")
+            else:
+                highscore_text = get_font(50).render("Highscore: {}".format(highscore), True, WHITE)
+            highscore_rect = highscore_text.get_rect(center=(self.width / 2, self.height / 2 + 200))
 
             self.screen.blit(game_over_text, game_over_rect)
+            self.screen.blit(highscore_text, highscore_rect)
 
-            for button in [restart_button, quit_button]:
+            for button in [restart_button, menu_button]:
                 button.changeColor(menu_mouse_pos)
                 button.update(self.screen)
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     quit_game()
+
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if restart_button.checkForInput(menu_mouse_pos):
                         game_state = "pre_game"
                         self.pre_game()
-                    if quit_button.checkForInput(menu_mouse_pos):
-                        quit_game()
+                    if menu_button.checkForInput(menu_mouse_pos):
+                        game_state = "menu"
+                        self.main_menu()
 
             self.player.update()
             pygame.display.update()
         del self
 
     def play(self):
-        global game_state
+        global game_state, voice_control, rms_threshold
         player = self.player
         friction = 1
         counter = 0
@@ -252,13 +314,27 @@ class Main(object):
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    game_state = "quit"
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_UP or event.key == pygame.K_SPACE and player.speed[1] > -player.maxSpeed:
-                        player.speed[1] = -player.maxSpeed
-                        flap.play()
-                elif event.type == pygame.KEYUP:
-                    friction = 0.99
+                    quit_game()
+
+                if not voice_control:
+                    if event.type == pygame.KEYDOWN:
+                        if (event.key == pygame.K_UP or event.key == pygame.K_SPACE
+                                and player.speed[1] > -player.maxSpeed):
+                            flap.play()
+                            player.speed[1] = -12
+                        elif event.type == pygame.KEYUP:
+                            friction = 0.99
+
+            if voice_control:
+                data = stream.read(CHUNK)
+                audio_signal = np.frombuffer(data, dtype=np.int16)
+
+                # Calculate RMS (Root Mean Square) as an estimate of loudness
+                rms = np.sqrt(abs(np.mean(np.square(audio_signal))))
+
+                if rms > rms_threshold and player.speed[1] > -player.maxSpeed:
+                    flap.play()
+                    player.speed[1] = -12
 
             for obstacle in self.obstacles:
                 if player.rect.colliderect(obstacle.rect) or player.rect.colliderect(obstacle.rect2):
@@ -291,7 +367,7 @@ class Main(object):
             self.draw_window()
 
     def main_menu(self):
-        global game_state
+        global game_state, voice_control
         while game_state == "menu":
             self.screen.blit(BACKGROUND, (0, 0))
 
@@ -301,13 +377,22 @@ class Main(object):
             menu_rect = menu_text.get_rect(center=(self.width / 2, self.height / 2 - 200))
 
             play_button = Button(image=None, pos=(self.width / 2, self.height / 2),
-                                 text_input="PLAY", font=get_font(75), base_color="#d7fcd4", hovering_color="White")
-            quit_button = Button(image=None, pos=(self.width / 2, self.height / 2 + 100),
+                                          text_input="PLAY", font=get_font(75), base_color="#d7fcd4",
+                                          hovering_color="White")
+            if voice_control:
+                voice_button = Button(image=None, pos=(self.width / 2, self.height / 2 + 100),
+                                      text_input="VOICE CONTROLS ON", font=get_font(75), base_color="#d7fcd4",
+                                      hovering_color="White")
+            else:
+                voice_button = Button(image=None, pos=(self.width / 2, self.height / 2 + 100),
+                                      text_input="VOICE CONTROLS OFF", font=get_font(75), base_color="#d7fcd4",
+                                      hovering_color="White")
+            quit_button = Button(image=None, pos=(self.width / 2, self.height / 2 + 200),
                                  text_input="QUIT", font=get_font(75), base_color="#d7fcd4", hovering_color="White")
 
             self.screen.blit(menu_text, menu_rect)
 
-            for button in [play_button, quit_button]:
+            for button in [play_button, voice_button, quit_button]:
                 button.changeColor(menu_mouse_pos)
                 button.update(self.screen)
 
@@ -317,8 +402,15 @@ class Main(object):
 
                 if event.type == pygame.MOUSEBUTTONDOWN:
                     if play_button.checkForInput(menu_mouse_pos):
+                        start.play()
                         game_state = "pre_game"
                         self.pre_game()
+
+                    if voice_button.checkForInput(menu_mouse_pos):
+                        if voice_control:
+                            voice_control = False
+                        else:
+                            voice_control = True
 
                     if quit_button.checkForInput(menu_mouse_pos):
                         quit_game()
