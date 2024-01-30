@@ -381,11 +381,11 @@ class Main(object):
                                           hovering_color="White")
             if voice_control:
                 voice_button = Button(image=None, pos=(self.width / 2, self.height / 2 + 100),
-                                      text_input="VOICE CONTROLS ON", font=get_font(75), base_color="#d7fcd4",
+                                      text_input="VOICE CONTROLS: ON", font=get_font(75), base_color="#d7fcd4",
                                       hovering_color="White")
             else:
                 voice_button = Button(image=None, pos=(self.width / 2, self.height / 2 + 100),
-                                      text_input="VOICE CONTROLS OFF", font=get_font(75), base_color="#d7fcd4",
+                                      text_input="VOICE CONTROLS: OFF", font=get_font(75), base_color="#d7fcd4",
                                       hovering_color="White")
             quit_button = Button(image=None, pos=(self.width / 2, self.height / 2 + 200),
                                  text_input="QUIT", font=get_font(75), base_color="#d7fcd4", hovering_color="White")
