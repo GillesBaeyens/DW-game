@@ -271,7 +271,8 @@ class Main(object):
                                     text_input="RESTART", font=get_font(75), base_color="#d7fcd4",
                                     hovering_color="White")
             menu_button = Button(image=None, pos=(self.width / 2, self.height / 2 + 100),
-                                 text_input="MAIN MENU", font=get_font(75), base_color="#d7fcd4", hovering_color="White")
+                                 text_input="MAIN MENU", font=get_font(75), base_color="#d7fcd4",
+                                 hovering_color="White")
 
             if new_highscore:
                 highscore_text = get_font(50).render("NEW HIGHSCORE: {}".format(highscore), True, "#d9243c")
@@ -377,8 +378,8 @@ class Main(object):
             menu_rect = menu_text.get_rect(center=(self.width / 2, self.height / 2 - 200))
 
             play_button = Button(image=None, pos=(self.width / 2, self.height / 2),
-                                          text_input="PLAY", font=get_font(75), base_color="#d7fcd4",
-                                          hovering_color="White")
+                                 text_input="PLAY", font=get_font(75), base_color="#d7fcd4",
+                                 hovering_color="White")
             if voice_control:
                 voice_button = Button(image=None, pos=(self.width / 2, self.height / 2 + 100),
                                       text_input="VOICE CONTROLS: ON", font=get_font(75), base_color="#d7fcd4",
