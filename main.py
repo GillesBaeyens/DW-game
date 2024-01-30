@@ -23,16 +23,15 @@ FLOOR = pygame.transform.scale_by(FLOOR_IMAGE, (7, 2))
 del BACKGROUND_IMAGE, FLOOR_IMAGE  # Delete all unneeded images
 
 # Load player sprite images
-PLAYER_IMAGE = pygame.image.load(os.path.join("assets", "player1.png"))
-PLAYER_IMAGE2 = pygame.image.load(os.path.join("assets", "player2.png"))
-PLAYER_IMAGE3 = pygame.image.load(os.path.join("assets", "player3.png"))
+choose_player = random.randint(0, 3)
+PLAYER_IMAGE = pygame.image.load(os.path.join("assets", f"player1.{choose_player}.png"))
+PLAYER_IMAGE2 = pygame.image.load(os.path.join("assets", f"player2.{choose_player}.png"))
 
 PLAYER_IMAGE = pygame.transform.scale_by(PLAYER_IMAGE, 4)   # Scale the image to 70x70 pixels
 PLAYER_IMAGE2 = pygame.transform.scale_by(PLAYER_IMAGE2, 4)
-PLAYER_IMAGE3 = pygame.transform.scale_by(PLAYER_IMAGE3, 4)
 
-PLAYER_IMAGES = [PLAYER_IMAGE, PLAYER_IMAGE2, PLAYER_IMAGE3] # Save images in an array to animate with
-del PLAYER_IMAGE, PLAYER_IMAGE2, PLAYER_IMAGE3  # Delete all unneeded images
+PLAYER_IMAGES = [PLAYER_IMAGE, PLAYER_IMAGE2]  # Save images in an array to animate with
+del PLAYER_IMAGE, PLAYER_IMAGE2  # Delete all unneeded images
 
 
 OBSTACLE_IMAGE = pygame.image.load(os.path.join("assets", "obstacle.png"))
@@ -87,15 +86,12 @@ class Player(pygame.sprite.Sprite):
         self.rect.center = (self.width / 2, self.height / 2)
 
     def update(self):
-        if game_state == "game_over":
-            self.current_sprite = 2
-        else:
-            self.animation_time += 1
-            if self.animation_time == 10:
-                self.current_sprite += 1
-                self.animation_time = 0
-            if self.current_sprite >= len(PLAYER_IMAGES) - 1:
-                self.current_sprite = 0
+        self.animation_time += 1
+        if self.animation_time == 10:
+            self.current_sprite += 1
+            self.animation_time = 0
+        if self.current_sprite >= len(PLAYER_IMAGES):
+            self.current_sprite = 0
         angle = -self.speed[1] * 4
         if angle > 90:
             angle = 90
