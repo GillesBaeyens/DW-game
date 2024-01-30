@@ -1,7 +1,9 @@
 import pygame
 import os
 import random
+from button import Button
 
+pygame.init()
 pygame.display.set_caption("Budget Geometry Dash")
 
 WHITE = (255, 255, 255)
@@ -18,8 +20,12 @@ BACKGROUND_IMAGE = pygame.image.load(os.path.join("assets", "background.png"))
 BACKGROUND = pygame.transform.scale_by(BACKGROUND_IMAGE, 7)
 FLOOR_IMAGE = pygame.image.load(os.path.join("assets", "floor.png"))
 FLOOR = pygame.transform.scale_by(FLOOR_IMAGE, (7, 2))
-PLAYER_IMAGE = pygame.image.load(os.path.join("assets", "player.png"))
-PLAYER = pygame.transform.scale_by(PLAYER_IMAGE, 2)   # Scale the image to 70x70 pixels
+PLAYER_IMAGE = pygame.image.load(os.path.join("assets", "player1.png"))
+PLAYER_IMAGE2 = pygame.image.load(os.path.join("assets", "player2.png"))
+PLAYER_IMAGE3 = pygame.image.load(os.path.join("assets", "player3.png"))
+PLAYER1 = pygame.transform.scale_by(PLAYER_IMAGE, 4)   # Scale the image to 70x70 pixels
+PLAYER2 = pygame.transform.scale_by(PLAYER_IMAGE2, 4)
+PLAYER3 = pygame.transform.scale_by(PLAYER_IMAGE3, 4)
 OBSTACLE_IMAGE = pygame.image.load(os.path.join("assets", "obstacle.png"))
 OBSTACLE = pygame.transform.scale_by(OBSTACLE_IMAGE, (4, 6))
 
@@ -52,7 +58,7 @@ class Obstacle(pygame.sprite.Sprite):
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.image = PLAYER
+        self.image = PLAYER1
         self.rect = self.image.get_rect()
         self.maxSpeed = 12
         self.speed = [0, 0]
@@ -66,7 +72,7 @@ class Player(pygame.sprite.Sprite):
             angle = 90
         elif angle < -90:
             angle = -90
-        self.image = pygame.transform.rotate(PLAYER, angle)
+        self.image = pygame.transform.rotate(PLAYER1, angle)
         self.rect = self.image.get_rect(center=self.rect.center)
         self.rect = self.rect.move(self.speed)
         self.rect.left = clip(self.rect.left, 0, self.width)
@@ -77,6 +83,10 @@ class Player(pygame.sprite.Sprite):
 
 def clip(val, minval, maxval):
     return min(max(val, minval), maxval)
+
+
+def get_font(size):  # Returns Press-Start-2P in the desired size
+    return pygame.font.Font("assets/font.ttf", size)
 
 
 class Main(object):
@@ -118,7 +128,8 @@ class Main(object):
 
     def generate_obstacles(self):
         self.obstacles.append(Obstacle())
-    def event_loop(self):
+    def play(self):
+        global game_state
         player = self.player
         friction = 1
         clock = pygame.time.Clock()
@@ -189,4 +200,4 @@ class Main(object):
 
 if __name__ == "__main__":
     app = Main()
-    app.event_loop()
+    app.main_menu()
